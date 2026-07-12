@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GourmetLog - ระบบจัดการบันทึกข้อมูลการกินประจำวัน</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .luxury-font {
+            font-family: 'Cinzel', serif;
+        }
+        
+        /* แก้ไขปัญหาธีม: เขียนแยกส่วนควบคุมสีพื้นหลังของแท็กหลักด้วย CSS มาตรฐานเพื่อป้องกันการชนกันของคอมไพเลอร์ */
+        .theme-bg { 
+            background-color: #0b132b; 
+            transition: background-color 0.5s, color 0.5s;
+        }
+        html.dark .theme-bg { 
+            background-color: #070a13; 
+        }
+        
+        .luxury-card { @apply bg-white/80 dark:bg-[#111c36]/60 backdrop-blur-md border border-[#c5a880]/20 dark:border-[#c5a880]/30 shadow-xl rounded-2xl transition-all duration-300; }
+        .gold-gradient-text { @apply bg-gradient-to-r from-[#e6c687] via-[#c5a880] to-[#9e7a44] bg-clip-text text-transparent; }
+        .gold-btn { @apply bg-gradient-to-r from-[#c5a880] to-[#9e7a44] text-[#070a13] font-semibold transition-all duration-300 hover:brightness-110 hover:shadow-[0_0_15px_rgba(197,168,128,0.5)]; }
+        .ocean-pill { @apply bg-[#1c3d5a] text-[#00f2fe] border border-[#00f2fe]/30; }
+        .coral-pill { @apply bg-[#4a1d2e] text-[#ff758f] border border-[#ff758f]/30; }
+        
+        /* สไตล์เสริมสำหรับการโหลดข้อมูล */
+        .loading-overlay { @apply fixed inset-0 z-50 bg-[#070a13]/50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300; }
+        .loading-overlay.active { @apply opacity-100 pointer-events-auto; }
+    </style>
+</head>
+<body class="theme-bg text-slate-800 dark:text-slate-100 min-h-screen flex flex-col selection:bg-[#c5a880]/30">
+
+    <div id="loading-spinner" class="loading-overlay">
+        <div class="flex flex-col items-center gap-3 p-5 luxury-card">
+            <i class="fa-solid fa-circle-notch text-3xl text-[#c5a880] animate-spin"></i>
+            <span class="text-xs font-medium tracking-wider text-slate-400">กำลังประมวลผลข้อมูล...</span>
+        </div>
+    </div>
+
+    <header class="border-b border-[#c5a880]/20 bg-white/40 dark:bg-[#070a13]/80 sticky top-0 z-40 backdrop-blur-md px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#00f2fe] to-[#ff758f] flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-utensils text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="luxury-font text-xl font-bold tracking-wider gold-gradient-text">GOURMETLOG</h1>
+                <p class="text-[10px] tracking-widest text-slate-400 dark:text-slate-500 uppercase">Haute Cuisine Tracker</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#111c36] border border-[#c5a880]/20">
+                <span class="text-xs text-slate-400">Goal:</span>
+                <span class="text-xs font-bold text-[#e6c687]" id="header-goal-val">0 kcal</span>
+            </div>
+
+            <button id="theme-toggle" class="w-10 h-10 rounded-xl luxury-card flex items-center justify-center hover:scale-105 active:scale-95 cursor-pointer text-[#c5a880]">
+                <i class="fa-solid fa-moon dark:hidden"></i>
+                <i class="fa-solid fa-sun hidden dark:block"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <div class="luxury-card p-6 border-t-4 border-t-[#00f2fe]">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-sm font-medium uppercase tracking-wider text-slate-400">แดชบอร์ดวันนี้</h2>
+                        <h3 class="text-2xl font-bold font-sans mt-1" id="dash-date">12 กรกฎาคม 2026</h3>
+                    </div>
+                    <button onclick="openModal('add-log')" class="gold-btn px-4 py-2 rounded-xl text-xs flex items-center gap-2 cursor-pointer shadow-md">
+                        <i class="fa-solid fa-plus"></i> บันทึกมื้ออาหาร
+                    </button>
+                </div>
+
+                <div class="mt-6 mb-4">
+                    <div class="flex justify-between text-xs mb-2">
+                        <span class="font-medium">สรุปพลังงานที่ได้รับ</span>
+                        <span class="font-bold" id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-[1px] border border-slate-300 dark:border-slate-700">
+                        <div id="calorie-progress-bar" class="h-full rounded-full bg-gradient-to-r from-[#00f2fe] to-[#ff758f] transition-all duration-500 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#070a13]/50 border border-slate-100 dark:border-slate-800">
+                        <p class="text-xs text-slate-400">ทานไปแล้ว</p>
+                        <p class="text-xl font-bold text-[#00f2fe] mt-1"><span id="dash-total-calories">0</span> <span class="text-xs font-normal text-slate-400">kcal</span></p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-[#070a13]/50 border border-slate-100 dark:border-slate-800">
+                        <p class="text-xs text-slate-400">คงเหลือโควตา</p>
+                        <p class="text-xl font-bold text-[#ff758f] mt-1"><span id="dash-remaining-calories">0</span> <span class="text-xs font-normal text-slate-400">kcal</span></p>
+                    </div>
+                </div>
+
+                <div id="status-alert" class="mt-4 p-3 rounded-xl text-xs flex items-center gap-3 hidden transition-all duration-300">
+                    <i class="fa-solid id-icon"></i>
+                    <span id="status-alert-text" class="font-medium"></span>
+                </div>
+            </div>
+
+            <div class="luxury-card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="luxury-font text-sm font-bold tracking-wider text-[#e6c687] flex items-center gap-2">
+                        <i class="fa-solid fa-star text-amber-400"></i> เมนูโปรดบันทึกไว
+                    </h3>
+                    <button onclick="openModal('add-fav')" class="text-xs text-slate-400 hover:text-[#c5a880] transition-colors">
+                        <i class="fa-solid fa-circle-plus"></i> เพิ่มเมนูโปรด
+                    </button>
+                </div>
+                <div id="favorites-container" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div class="luxury-card p-6">
+                <h3 class="luxury-font text-sm font-bold tracking-wider text-[#e6c687] mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> ตั้งค่าเป้าหมายแคลอรี
+                </h3>
+                <div class="flex gap-3">
+                    <div class="relative flex-1">
+                        <input type="number" id="setting-goal-input" class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]" placeholder="เช่น 2000">
+                        <span class="absolute right-4 top-3 text-xs text-slate-400">kcal</span>
+                    </div>
+                    <button onclick="updateCalorieGoal()" class="gold-btn px-5 py-2.5 rounded-xl text-sm cursor-pointer">
+                        บันทึก
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            <div class="luxury-card p-6 flex-1 flex flex-col min-h-[500px]">
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="luxury-font text-base font-bold tracking-wider text-[#e6c687]">ประวัติการกินย้อนหลัง</h3>
+                        <p class="text-xs text-slate-400">ค้นหา แก้ไข และลบข้อมูลรายการอาหารของคุณ</p>
+                    </div>
+                    
+                    <div class="flex gap-1.5 self-start sm:self-auto overflow-x-auto max-w-full">
+                        <button onclick="filterLogs('all')" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[#c5a880] text-[#070a13]" id="filter-all">ทั้งหมด</button>
+                        <button onclick="filterLogs('มื้อเช้า')" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-slate-100 dark:bg-[#070a13] text-slate-400" id="filter-breakfast">เช้า</button>
+                        <button onclick="filterLogs('มื้อเที่ยง')" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-slate-100 dark:bg-[#070a13] text-slate-400" id="filter-lunch">เที่ยง</button>
+                        <button onclick="filterLogs('มื้อเย็น')" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-slate-100 dark:bg-[#070a13] text-slate-400" id="filter-dinner">เย็น</button>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                        <input type="text" id="log-search" oninput="searchLogs()" class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]" placeholder="ค้นหาชื่ออาหารหรือเครื่องดื่ม...">
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 text-xs text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-2">มื้อ/เวลา</th>
+                                <th class="py-3 px-4">เมนูอาหาร</th>
+                                <th class="py-3 px-4 text-right">แคลอรี</th>
+                                <th class="py-3 px-4 text-center">การจัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body" class="text-sm divide-y divide-slate-100 dark:divide-slate-800/50"></tbody>
+                    </table>
+                    
+                    <div id="empty-state" class="hidden py-12 text-center text-slate-400 flex-col items-center justify-center gap-2">
+                        <i class="fa-solid fa-plate-wheat text-3xl opacity-30 mb-2"></i>
+                        <p class="text-sm">ไม่พบข้อมูลบันทึกตามเงื่อนไขที่เลือก</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: บันทึกมื้ออาหาร -->
+    <div id="modal-add-log" class="fixed inset-0 z-50 bg-[#070a13]/70 backdrop-blur-md flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="luxury-card max-w-md w-full p-6 transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="luxury-font text-lg font-bold text-[#e6c687]" id="modal-log-title">บันทึกข้อมูลการกิน</h3>
+                <button onclick="closeModal('add-log')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form id="food-form" onsubmit="handleLogFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="form-log-index">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1.5">ชื่ออาหาร / เครื่องดื่ม</label>
+                    <input type="text" id="form-food-name" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">หมวดหมู่มื้อ</label>
+                        <select id="form-category" class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                            <option value="มื้อเช้า">มื้อเช้า</option>
+                            <option value="มื้อเที่ยง">มื้อเที่ยง</option>
+                            <option value="มื้อเย็น">มื้อเย็น</option>
+                            <option value="มื้อว่าง">มื้อว่าง</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">แคลอรี (kcal)</label>
+                        <input type="number" id="form-calories" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">วันที่กิน</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">เวลากิน</label>
+                        <input type="time" id="form-time" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 mt-6">
+                    <button type="button" onclick="closeModal('add-log')" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl text-sm font-medium cursor-pointer">ยกเลิก</button>
+                    <button type="submit" class="flex-1 gold-btn py-2.5 rounded-xl text-sm font-medium cursor-pointer">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: เพิ่มเมนูโปรด -->
+    <div id="modal-add-fav" class="fixed inset-0 z-50 bg-[#070a13]/70 backdrop-blur-md flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="luxury-card max-w-sm w-full p-6 transform scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="luxury-font text-base font-bold text-[#e6c687]"><i class="fa-solid fa-star text-amber-400 mr-1"></i> เพิ่มรายการเมนูโปรด</h3>
+                <button onclick="closeModal('add-fav')" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <form id="fav-form" onsubmit="handleFavFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1.5">ชื่ออาหารด่วน</label>
+                    <input type="text" id="fav-food-name" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]" placeholder="เช่น ข้าวมันไก่ต้ม">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">หมวดหมู่มื้อ</label>
+                        <select id="fav-category" class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                            <option value="มื้อเช้า">มื้อเช้า</option>
+                            <option value="มื้อเที่ยง">มื้อเที่ยง</option>
+                            <option value="มื้อเย็น">มื้อเย็น</option>
+                            <option value="มื้อว่าง">มื้อว่าง</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1.5">แคลอรี (kcal)</label>
+                        <input type="number" id="fav-calories" required class="w-full bg-slate-50 dark:bg-[#070a13]/50 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#c5a880]">
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeModal('add-fav')" class="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl text-sm font-medium cursor-pointer">ปิด</button>
+                    <button type="submit" class="flex-1 gold-btn py-2.5 rounded-xl text-sm font-medium cursor-pointer">เพิ่มเมนู</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- API CONFIGURATION ---
+        const API_URL = "https://script.google.com/macros/library/d/1b_qXXb6_36TlMghcd1-H-66VDoBbMI62d9ZaNFnHGkqmV46peXtkuC33/5";
+
+        // Global State Variables
+        let appSettings = { DailyCalorieGoal: 2000 };
+        let appFavorites = [];
+        let appDailyLogs = [];
+        
+        let currentFilter = 'all';
+        let currentSearchQuery = '';
+
+        // --- APP INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            initDateDisplay();
+            fetchAllDataFromServer(); 
+        });
+
+        function initDateDisplay() {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('dash-date').innerText = new Date().toLocaleDateString('th-TH', options);
+        }
+
+        function showLoading(show) {
+            const spinner = document.getElementById('loading-spinner');
+            if (show) spinner.classList.add('active');
+            else spinner.classList.remove('active');
+        }
+
+        // --- FETCH READ CONTROLLERS (GET) ---
+        async function fetchAllDataFromServer() {
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_URL}?action=getAllData`);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    appSettings.DailyCalorieGoal = parseInt(result.settings.DailyCalorieGoal) || 2000;
+                    appFavorites = result.favorites || [];
+                    appDailyLogs = result.dailyLogs || [];
+                    
+                    document.getElementById('setting-goal-input').value = appSettings.DailyCalorieGoal;
+                    renderAll();
+                } else {
+                    alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + result.message);
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ API ได้");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderFavorites();
+            renderLogsTable();
+        }
+
+        // --- THEME SYSTEM ---
+        function initTheme() {
+            const toggleBtn = document.getElementById('theme-toggle');
+            
+            // ตรวจสอบธีมที่ผู้ใช้เคยตั้งค่าบันทึกไว้ในเบราว์เซอร์
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else {
+                document.documentElement.classList.add('dark');
+            }
+
+            toggleBtn.addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
+        }
+
+        // --- MODAL CONTROLLERS ---
+        function openModal(modalId, rowIndex = null) {
+            const modal = document.getElementById(`modal-${modalId}`);
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('.transform').classList.remove('scale-95');
+            }, 10);
+
+            if (modalId === 'add-log') {
+                const now = new Date();
+                document.getElementById('form-date').value = now.toISOString().split('T')[0];
+                document.getElementById('form-time').value = now.toTimeString().split(' ')[0].substring(0,5);
+                
+                if (rowIndex) {
+                    document.getElementById('modal-log-title').innerText = "แก้ไขข้อมูลการกิน";
+                    const log = appDailyLogs.find(l => l.rowIndex === rowIndex);
+                    if(log) {
+                        document.getElementById('form-log-index').value = log.rowIndex;
+                        document.getElementById('form-food-name').value = log.FoodName;
+                        document.getElementById('form-category').value = log.Category;
+                        document.getElementById('form-calories').value = log.Calories;
+                        document.getElementById('form-date').value = log.Date;
+                        document.getElementById('form-time').value = log.Time;
+                    }
+                } else {
+                    document.getElementById('modal-log-title').innerText = "บันทึกข้อมูลการกิน";
+                    document.getElementById('food-form').reset();
+                    document.getElementById('form-log-index').value = '';
+                }
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(`modal-${modalId}`);
+            modal.classList.add('opacity-0');
+            modal.querySelector('.transform').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- DASHBOARD CALCULATION LOGIC ---
+        function renderDashboard() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayLogs = appDailyLogs.filter(log => log.Date === todayStr);
+            
+            const totalCalories = todayLogs.reduce((sum, item) => sum + parseInt(item.Calories || 0), 0);
+            const goal = appSettings.DailyCalorieGoal;
+            const remaining = Math.max(0, goal - totalCalories);
+            const percent = Math.min(100, Math.round((totalCalories / goal) * 100));
+
+            document.getElementById('header-goal-val').innerText = `${goal.toLocaleString()} kcal`;
+            document.getElementById('dash-total-calories').innerText = totalCalories.toLocaleString();
+            document.getElementById('dash-remaining-calories').innerText = remaining.toLocaleString();
+            document.getElementById('progress-percent').innerText = `${percent}%`;
+            
+            const bar = document.getElementById('calorie-progress-bar');
+            bar.style.width = `${percent}%`;
+
+            const alertBox = document.getElementById('status-alert');
+            const alertText = document.getElementById('status-alert-text');
+            alertBox.className = "mt-4 p-3 rounded-xl text-xs flex items-center gap-3 transition-all duration-300 ";
+
+            if (totalCalories === 0) {
+                alertBox.classList.add('hidden');
+            } else if (percent < 75) {
+                alertBox.classList.remove('hidden');
+                alertBox.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
+                alertText.innerHTML = "<strong>ระดับปลอดภัย:</strong> วันนี้คุณเลือกทานสารอาหารได้ดี คุมสัดส่วนได้เยี่ยมเลย!";
+            } else if (percent >= 75 && percent < 100) {
+                alertBox.classList.remove('hidden');
+                alertBox.classList.add('bg-amber-500/10', 'text-amber-400', 'border', 'border-amber-500/20');
+                alertText.innerHTML = "<strong>ใกล้เต็มโควตา:</strong> พลังงานรวมของคุณเข้าใกล้ขีดจำกัดเป้าหมายประจำวันแล้วระวังมื้อถัดไปด้วยนะ";
+            } else {
+                alertBox.classList.remove('hidden');
+                alertBox.classList.add('bg-rose-500/10', 'text-rose-400', 'border', 'border-rose-500/20', 'animate-pulse');
+                alertText.innerHTML = "<strong>เกินเป้าหมายแล้ว!</strong> วันนี้คุณทานปริมาณแคลอรีเกินกำหนด แนะนำให้เน้นกิจกรรมเผาผลาญเพิ่ม";
+            }
+        }
+
+        // --- FAVORITES ACTIONS ---
+        function renderFavorites() {
+            const container = document.getElementById('favorites-container');
+            container.innerHTML = '';
+            
+            appFavorites.forEach(fav => {
+                const btn = document.createElement('button');
+                btn.className = "px-3 py-2 rounded-xl text-xs font-medium luxury-card border border-[#c5a880]/30 text-left hover:scale-102 flex items-center gap-2 cursor-pointer group";
+                btn.onclick = () => quickLogFavorite(fav);
+                btn.innerHTML = `
+                    <div class="w-2 h-2 rounded-full ${fav.Category === 'มื้อเช้า' ? 'bg-[#00f2fe]' : fav.Category === 'มื้อเที่ยง' ? 'bg-amber-400' : fav.Category === 'มื้อเย็น' ? 'bg-[#ff758f]' : 'bg-slate-400'}"></div>
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">${fav.FoodName}</span>
+                        <span class="text-[10px] text-slate-400">${fav.Calories} kcal</span>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        async function quickLogFavorite(favItem) {
+            showLoading(true);
+            const now = new Date();
+            const payload = {
+                action: "addLog",
+                data: {
+                    foodName: favItem.FoodName,
+                    category: favItem.Category,
+                    calories: favItem.Calories,
+                    date: now.toISOString().split('T')[0],
+                    time: now.toTimeString().split(' ')[0].substring(0,5),
+                    isFavorite: true
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if(result.status === "success") {
+                    await fetchAllDataFromServer(); 
+                } else {
+                    alert("บันทึกไม่สำเร็จ: " + result.message);
+                }
+            } catch (error) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function handleFavFormSubmit(e) {
+            e.preventDefault();
+            showLoading(true);
+            
+            const payload = {
+                action: "addFavorite",
+                data: {
+                    foodName: document.getElementById('fav-food-name').value,
+                    category: document.getElementById('fav-category').value,
+                    calories: parseInt(document.getElementById('fav-calories').value)
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if(result.status === "success") {
+                    closeModal('add-fav');
+                    document.getElementById('fav-form').reset();
+                    await fetchAllDataFromServer();
+                } else {
+                    alert("บันทึกเมนูโปรดล้มเหลว: " + result.message);
+                }
+            } catch (error) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- SETTINGS CONTROLLER ---
+        async function updateCalorieGoal() {
+            const val = parseInt(document.getElementById('setting-goal-input').value);
+            if(!val || val <= 0) return alert("กรุณากรอกเป้าหมายแคลอรีที่ถูกต้อง");
+            
+            showLoading(true);
+            const payload = {
+                action: "updateGoal",
+                goalValue: val
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if(result.status === "success") {
+                    await fetchAllDataFromServer();
+                } else {
+                    alert("อัปเดตเป้าหมายล้มเหลว: " + result.message);
+                }
+            } catch (error) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- WRITE / UPDATE / DELETE TRANSACTIONS (POST) ---
+        async function handleLogFormSubmit(e) {
+            e.preventDefault();
+            showLoading(true);
+
+            const rowIndex = document.getElementById('form-log-index').value;
+            const action = rowIndex ? "editLog" : "addLog";
+
+            const payload = {
+                action: action,
+                data: {
+                    rowIndex: rowIndex,
+                    foodName: document.getElementById('form-food-name').value,
+                    category: document.getElementById('form-category').value,
+                    calories: parseInt(document.getElementById('form-calories').value),
+                    date: document.getElementById('form-date').value,
+                    time: document.getElementById('form-time').value
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === "success") {
+                    closeModal('add-log');
+                    document.getElementById('food-form').reset();
+                    await fetchAllDataFromServer();
+                } else {
+                    alert("ทำรายการไม่สำเร็จ: " + result.message);
+                }
+            } catch (error) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteLog(rowIndex) {
+            if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการบันทึกนี้?")) return;
+            
+            showLoading(true);
+            const payload = {
+                action: "deleteLog",
+                rowIndex: rowIndex
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if(result.status === "success") {
+                    await fetchAllDataFromServer();
+                } else {
+                    alert("ลบข้อมูลล้มเหลว: " + result.message);
+                }
+            } catch (error) {
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // --- TABLE LOGS RENDERING & CLIENT FILTERS ---
+        function filterLogs(category) {
+            currentFilter = category;
+            const buttons = {
+                all: document.getElementById('filter-all'),
+                'มื้อเช้า': document.getElementById('filter-breakfast'),
+                'มื้อเที่ยง': document.getElementById('filter-lunch'),
+                'มื้อเย็น': document.getElementById('filter-dinner')
+            };
+            
+            Object.keys(buttons).forEach(key => {
+                if(buttons[key]) {
+                    if(key === category) {
+                        buttons[key].className = "px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-[#c5a880] text-[#070a13]";
+                    } else {
+                        buttons[key].className = "px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer bg-slate-100 dark:bg-[#070a13] text-slate-400";
+                    }
+                }
+            });
+            renderLogsTable();
+        }
+
+        function searchLogs() {
+            currentSearchQuery = document.getElementById('log-search').value.toLowerCase();
+            renderLogsTable();
+        }
+
+        function renderLogsTable() {
+            const tbody = document.getElementById('logs-table-body');
+            const emptyState = document.getElementById('empty-state');
+            tbody.innerHTML = '';
+
+            let filtered = appDailyLogs;
+            
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(log => log.Category === currentFilter);
+            }
+            
+            if (currentSearchQuery.trim() !== '') {
+                filtered = filtered.filter(log => log.FoodName.toLowerCase().includes(currentSearchQuery));
+            }
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+            }
+
+            filtered.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50 dark:hover:bg-[#111c36]/20 transition-colors group";
+                
+                let catBadge = "text-slate-400 bg-slate-100 dark:bg-slate-800";
+                if(log.Category === 'มื้อเช้า') catBadge = "ocean-pill";
+                if(log.Category === 'มื้อเที่ยง') catBadge = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+                if(log.Category === 'มื้อเย็น') catBadge = "coral-pill";
+
+                tr.innerHTML = `
+                    <td class="py-4 px-2 whitespace-nowrap">
+                        <span class="px-2 py-1 rounded-md text-[11px] font-semibold ${catBadge}">${log.Category}</span>
+                        <p class="text-[11px] text-slate-400 mt-1"><i class="fa-regular fa-clock opacity-60"></i> ${log.Time} น. (${log.Date})</p>
+                    </td>
+                    <td class="py-4 px-4 font-medium text-slate-700 dark:text-slate-200">
+                        ${log.FoodName}
+                    </td>
+                    <td class="py-4 px-4 text-right font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                        ${parseInt(log.Calories).toLocaleString()} <span class="text-[10px] font-normal text-slate-400">kcal</span>
+                    </td>
+                    <td class="py-4 px-4 whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="openModal('add-log', ${log.rowIndex})" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#111c36] text-amber-400 flex items-center justify-center border border-slate-200 dark:border-slate-700/60 cursor-pointer hover:scale-105 active:scale-95">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deleteLog(${log.rowIndex})" class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-[#111c36] text-rose-400 flex items-center justify-center border border-slate-200 dark:border-slate-700/60 cursor-pointer hover:scale-105 active:scale-95">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
