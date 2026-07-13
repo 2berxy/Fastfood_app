@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastFood</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669', 800: '#065f46', 900: '#064e3b', 950: '#022c22' },
+                        mint: { 50: '#effef5', 100: '#d1fae5', 200: '#a7f3d0' }
+                    },
+                    fontFamily: {
+                        pixel: ['"Press Start 2P"', 'cursive'],
+                        thai: ['Kanit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .font-pixel { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
+        .pixel-shadow { box-shadow: 6px 6px 0px 0px rgba(0,0,0,1); transition: all 0.1s ease; }
+        .dark .pixel-shadow { box-shadow: 6px 6px 0px 0px #a7f3d0; } 
+        .pixel-shadow-sm { box-shadow: 4px 4px 0px 0px rgba(0,0,0,1); transition: all 0.1s ease; }
+        .dark .pixel-shadow-sm { box-shadow: 4px 4px 0px 0px #a7f3d0; }
+        .pixel-btn:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: none !important; }
+        .pixel-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #d1fae5; border-left: 3px solid #000; }
+        .dark ::-webkit-scrollbar-track { background: #064e3b; border-left: 3px solid #a7f3d0; }
+        ::-webkit-scrollbar-thumb { background: #10b981; border: 3px solid #000; }
+        .dark ::-webkit-scrollbar-thumb { background: #34d399; border: 3px solid #022c22; }
+        .pixel-input { border: 3px solid #000; outline: none; }
+        .pixel-input:focus { background-color: #effef5; }
+        .dark .pixel-input { border-color: #a7f3d0; background-color: #064e3b; color: white; }
+        .dark .pixel-input:focus { background-color: #065f46; }
+    </style>
+</head>
+<body class="bg-mint-50 dark:bg-emerald-950 text-black dark:text-mint-100 transition-colors duration-300 h-screen overflow-hidden">
+
+    <nav class="absolute top-0 w-full p-4 flex justify-between items-center z-10 pointer-events-none">
+        <h1 class="font-pixel text-sm md:text-xl text-emerald-600 dark:text-emerald-400 drop-shadow-md">
+            <span class="text-2xl">👾</span> FastFood
+        </h1>
+        <button onclick="toggleTheme()" class="pointer-events-auto pixel-btn pixel-shadow-sm border-2 border-black dark:border-mint-200 bg-white dark:bg-emerald-800 p-2 text-xs font-pixel">
+            THEME
+        </button>
+    </nav>
+
+    <div class="flex flex-col md:flex-row h-full pt-16 md:pt-0">
+        
+        <div class="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center overflow-y-auto">
+            
+            <div class="bg-white dark:bg-emerald-900 border-4 border-black dark:border-mint-200 p-6 pixel-shadow mb-8 relative">
+                <h2 class="font-pixel text-xs md:text-sm mb-4">DAILY CALORIES</h2>
+                <div class="flex justify-between items-end mb-2">
+                    <span id="cal-count" class="font-pixel text-2xl md:text-4xl text-emerald-600 dark:text-emerald-400">0</span>
+                    <span class="font-pixel text-xs">/ <span id="cal-goal">2000</span> KCAL</span>
+                </div>
+                <div class="w-full h-6 border-2 border-black dark:border-mint-200 bg-gray-200 dark:bg-gray-800 relative">
+                    <div id="cal-progress" class="h-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-500 w-0"></div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="font-pixel text-[10px] mb-3 text-gray-600 dark:text-gray-300">FAVORITE MEALS (QUICK ADD)</h3>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="addFav('กาแฟดำ', 'Snack', 15)" class="pixel-btn pixel-shadow-sm border-2 border-black dark:border-mint-200 bg-mint-100 dark:bg-emerald-800 px-3 py-2 text-sm font-semibold hover:bg-mint-200 transition-colors">☕ กาแฟดำ</button>
+                    <button onclick="addFav('อกไก่ 7-11', 'Lunch', 120)" class="pixel-btn pixel-shadow-sm border-2 border-black dark:border-mint-200 bg-mint-100 dark:bg-emerald-800 px-3 py-2 text-sm font-semibold hover:bg-mint-200 transition-colors">🍗 อกไก่ 7-11</button>
+                    <button onclick="addFav('เวย์โปรตีน', 'Breakfast', 150)" class="pixel-btn pixel-shadow-sm border-2 border-black dark:border-mint-200 bg-mint-100 dark:bg-emerald-800 px-3 py-2 text-sm font-semibold hover:bg-mint-200 transition-colors">🥛 เวย์โปรตีน</button>
+                </div>
+            </div>
+
+            <button onclick="openModal()" class="pixel-btn pixel-shadow border-4 border-black dark:border-mint-200 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-black p-4 font-pixel text-sm md:text-base text-center transition-colors">
+                + ADD NEW MEAL
+            </button>
+        </div>
+
+        <div class="w-full md:w-1/2 bg-mint-100 dark:bg-emerald-800 border-l-4 border-black dark:border-mint-200 p-6 md:p-12 overflow-y-auto pt-10 md:pt-20">
+            <h2 class="font-pixel text-sm mb-6 flex items-center gap-2">
+                <span>📜</span> HISTORY LOG
+            </h2>
+            <div id="history-list" class="space-y-4">
+                </div>
+        </div>
+    </div>
+
+    <div id="food-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-emerald-900 border-4 border-black dark:border-mint-200 p-6 md:p-8 pixel-shadow w-11/12 max-w-md transform scale-95 transition-transform duration-300" id="modal-content">
+            <h2 class="font-pixel text-sm mb-6 text-center text-emerald-600 dark:text-mint-200">LOG NEW MEAL</h2>
+            <form id="food-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block font-pixel text-[10px] mb-1">FOOD NAME</label>
+                    <input type="text" id="foodName" required class="pixel-input w-full p-2 text-sm font-thai" placeholder="เช่น ข้าวกะเพราหมูสับ">
+                </div>
+                <div>
+                    <label class="block font-pixel text-[10px] mb-1">MEAL TYPE</label>
+                    <select id="mealType" class="pixel-input w-full p-2 text-sm font-pixel text-[10px]">
+                        <option value="Breakfast">BREAKFAST</option>
+                        <option value="Lunch">LUNCH</option>
+                        <option value="Dinner">DINNER</option>
+                        <option value="Snack">SNACK</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-pixel text-[10px] mb-1">CALORIES</label>
+                    <input type="number" id="calories" required class="pixel-input w-full p-2 text-sm font-pixel" placeholder="0">
+                </div>
+                <div class="flex gap-4 mt-6 pt-4">
+                    <button type="button" onclick="closeModal()" class="pixel-btn flex-1 border-2 border-black dark:border-mint-200 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 p-3 font-pixel text-[10px] pixel-shadow-sm text-center">CANCEL</button>
+                    <button type="submit" id="saveBtn" class="pixel-btn flex-1 border-2 border-black dark:border-mint-200 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-black p-3 font-pixel text-[10px] pixel-shadow-sm text-center">SAVE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbysM-RcqiLyVA8qvdMjRkTXiuPSpfR3hHgf3Cyp2gOhxpFKdmfMMMMWIGfHElc3NZON/exec';
+        const TDEE_GOAL = 2000;
+        let foodLogs = [];
+
+        function getTodayString() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            return (new Date(now - offset)).toISOString().split('T')[0];
+        }
+
+        async function fetchLogs() {
+            document.getElementById('history-list').innerHTML = `<p class="font-pixel text-[10px] text-center text-gray-500 mt-10 animate-pulse">LOADING...</p>`;
+            try {
+                // ดึงข้อมูลทั้งหมดจากชีต (ทะลวง Cache เบราว์เซอร์ด้วย t=time)
+                const res = await fetch(`${API_URL}?t=${new Date().getTime()}`);
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    const today = getTodayString();
+                    
+                    // ให้หน้าเว็บคัดกรองเฉพาะข้อมูลของ "วันนี้" เท่านั้น
+                    const todaysData = result.data.filter(item => String(item.date).includes(today));
+                    
+                    foodLogs = todaysData.map(item => {
+                        let timeStr = "00:00";
+                        if (item.timestamp) {
+                            // ดึงเฉพาะเวลา HH:mm มาแสดงผล
+                            timeStr = String(item.timestamp).split(' ')[1] || "00:00";
+                            timeStr = timeStr.substring(0, 5);
+                        }
+                        return {
+                            id: item.id,
+                            time: timeStr,
+                            name: item.foodName,
+                            type: item.mealType,
+                            calories: parseInt(item.calories) || 0
+                        };
+                    });
+                    
+                    updateDashboard();
+                    renderHistory();
+                }
+            } catch (error) {
+                document.getElementById('history-list').innerHTML = `<p class="font-pixel text-[10px] text-center text-red-500 mt-10">CONNECTION FAILED</p>`;
+            }
+        }
+
+        function updateDashboard() {
+            const totalCalories = foodLogs.reduce((sum, item) => sum + item.calories, 0);
+            document.getElementById('cal-count').innerText = totalCalories;
+            
+            let percent = (totalCalories / TDEE_GOAL) * 100;
+            if (percent > 100) percent = 100;
+            
+            const progressBar = document.getElementById('cal-progress');
+            progressBar.style.width = `${percent}%`;
+
+            if(totalCalories > TDEE_GOAL) {
+                progressBar.classList.replace('bg-emerald-500', 'bg-red-500');
+                progressBar.classList.replace('dark:bg-emerald-400', 'dark:bg-red-400');
+            } else {
+                progressBar.classList.replace('bg-red-500', 'bg-emerald-500');
+                progressBar.classList.replace('dark:bg-red-400', 'dark:bg-emerald-400');
+            }
+        }
+
+        function renderHistory() {
+            const listContainer = document.getElementById('history-list');
+            listContainer.innerHTML = ''; 
+
+            if (foodLogs.length === 0) {
+                listContainer.innerHTML = `<p class="font-pixel text-[10px] text-center text-gray-500 mt-10">NO LOGS TODAY</p>`;
+                return;
+            }
+
+            const sortedLogs = [...foodLogs].sort((a, b) => b.id - a.id);
+
+            sortedLogs.forEach(item => {
+                let icon = "🍽️";
+                if(item.type === "Breakfast") icon = "🍳";
+                if(item.type === "Lunch") icon = "🍱";
+                if(item.type === "Dinner") icon = "🍝";
+                if(item.type === "Snack") icon = "🍰";
+
+                const cardHTML = `
+                    <div id="item-${item.id}" class="bg-white dark:bg-emerald-900 border-2 border-black dark:border-mint-200 p-4 flex justify-between items-center pixel-shadow-sm group transition-all">
+                        <div class="flex items-center gap-4">
+                            <div class="text-2xl">${icon}</div>
+                            <div>
+                                <h4 class="font-semibold text-lg text-emerald-800 dark:text-mint-100">${item.name}</h4>
+                                <p class="font-pixel text-[8px] text-gray-500 dark:text-mint-200/70 mt-1">${item.time} | ${item.type.toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="font-pixel text-xs text-emerald-600 dark:text-emerald-400">${item.calories} KCAL</span>
+                            <button onclick="deleteItem('${item.id}', this)" class="text-red-500 hover:text-red-700 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">✖</button>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', cardHTML);
+            });
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "SAVING...";
+            btn.disabled = true;
+
+            const payload = {
+                action: 'addLog',
+                data: {
+                    foodName: document.getElementById('foodName').value,
+                    mealType: document.getElementById('mealType').value,
+                    calories: parseInt(document.getElementById('calories').value)
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                if(response.ok) {
+                    await fetchLogs();
+                    closeModal();
+                    document.getElementById('food-form').reset();
+                }
+            } catch (error) {
+                alert("บันทึกไม่สำเร็จ");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function addFav(name, type, calories) {
+            const payload = { action: 'addLog', data: { foodName: name, mealType: type, calories: calories } };
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) await fetchLogs();
+            } catch (error) {
+                alert("บันทึกไม่สำเร็จ");
+            }
+        }
+
+        async function deleteItem(id, btnElement) {
+            if(confirm("ลบรายการอาหารนี้?")) {
+                btnElement.innerText = "⏳";
+                btnElement.disabled = true;
+                document.getElementById(`item-${id}`).classList.add('opacity-50'); 
+
+                const payload = { action: 'deleteLog', id: id };
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        foodLogs = foodLogs.filter(item => String(item.id) !== String(id));
+                        updateDashboard();
+                        renderHistory();
+                    }
+                } catch (error) {
+                    alert("ลบไม่สำเร็จ");
+                    document.getElementById(`item-${id}`).classList.remove('opacity-50');
+                    btnElement.innerText = "✖";
+                    btnElement.disabled = false;
+                }
+            }
+        }
+
+        const modal = document.getElementById('food-modal');
+        const modalContent = document.getElementById('modal-content');
+        function openModal() { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); modalContent.classList.add('scale-100'); }, 10); }
+        function closeModal() { modal.classList.add('opacity-0'); modalContent.classList.remove('scale-100'); modalContent.classList.add('scale-95'); setTimeout(() => { modal.classList.add('hidden'); }, 300); }
+        modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            html.classList.toggle('light');
+        }
+
+        window.onload = () => { fetchLogs(); };
+    </script>
+</body>
+</html>
